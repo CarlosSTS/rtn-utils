@@ -1,0 +1,39 @@
+{
+  "name": "@carlossts/rtn-utils",
+  "version": "1.0.0",
+  "description": "Tools and utilities for React Native with turbo modules.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CarlosSTS/rtn-utils.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CarlosSTS/rtn-utils/issues"
+  },
+  "homepage": "https://github.com/CarlosSTS/rtn-utils#readme",
+  "main": "js/index.ts",
+  "react-native": "js/index",
+  "source": "js/index",
+  "files": [
+    "js",
+    "android",
+    "!android/build"
+  ],
+  "keywords": [
+    "react-native",
+    "android"
+  ],
+  "license": "MIT",
+  "devDependencies": {},
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "codegenConfig": {
+    "name": "RTNUtilsSpec",
+    "type": "modules",
+    "jsSrcsDir": "js",
+    "android": {
+      "javaPackageName": "com.rtnutils"
+    }
+  }
+}
