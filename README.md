@@ -35,7 +35,7 @@ yarn add @carlossts/rtn-utils
 ![isDeviceSecure](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Fcarlossts-rtn-local-authentication%2Fimage05.png?alt=media&token=2f76b088-23c5-4f14-b248-649f3065299d)
 
 ### openGlobalSettings method
-![openGlobalSettings](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage06.jpeg?alt=media&token=269c2678-c8df-4fa0-88fc-692a6538c5ec)
+![openGlobalSettings](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage06.jpeg?alt=media&token=823f08fc-ac03-4d00-bc21-6c8e71c1cb1d)
 
 ## API Reference
 
