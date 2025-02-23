@@ -183,7 +183,7 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         }
     
         val url = options.getString("url")
-        val packageName = options.getString("packageName.")
+        val packageName = options.getString("packageName")
 
         if (url == null) {
             promise.reject(E_VALIDATION_FAILS, "URL is required.")

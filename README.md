@@ -40,6 +40,9 @@ yarn add @carlossts/rtn-utils
 ### getLocationApps method
 <img src="https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage07.jpeg?alt=media&token=455c652f-a1d9-41c1-8e7c-8099b9c18c0f" width="200" />
 
+### openAppWithLocation method
+<img src="https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage08.jpeg?alt=media&token=7c016f39-b8b0-4d0a-91dc-c393f12277d6" width="200" />
+
 ## API Reference
 
 ## Methods
@@ -238,8 +241,14 @@ import { RTNUtils } from '@carlossts/rtn-utils';
 const App = () => {
    const openAppWithLocation = useCallback(async () => {
     try {
+      const lat = -4.128489;
+      const lng = -38.2593854;
+      const label = 'My Location Test';
+      const scheme = `geo:0,0?q=${lat},${lng}(${label})`;
+
       const apps = await RTNUtils?.openAppWithLocation({
-        includesBase64: true
+        packageName: "com.google.android.apps.maps",
+        url: scheme,
       });
       Alert.alert('App opened successfully');
     } catch (error) {
