@@ -184,7 +184,7 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
     
         val url = options.getString("url")
         val packageName = options.getString("packageName")
-
+    
         if (url == null) {
             promise.reject(E_VALIDATION_FAILS, "URL is required.")
             return
@@ -204,19 +204,19 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
             return
         }
     
-        val launchIntent = pm.getLaunchIntentForPackage(packageName)
-        if (launchIntent != null) {
-            launchIntent.data = Uri.parse(url)
-            launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        intent.setPackage(packageName)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
     
+        if (intent.resolveActivity(pm) != null) {
             try {
-                reactApplicationContext.startActivity(launchIntent)
+                reactApplicationContext.startActivity(intent)
                 promise.resolve("App opened successfully.")
             } catch (e: Exception) {
                 promise.reject("openAppWithLocationError", "Failed to open app with location", e)
             }
         } else {
-            promise.reject(E_INTENT_IS_NULL, "Intent is null.")
+            promise.reject(E_INTENT_IS_NULL, "App does not support the URL scheme.")
         }
     }
 

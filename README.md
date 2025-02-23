@@ -272,7 +272,7 @@ export default App;
 
 | Code                  | Description                                       |
 | --------------------- | ------------------------------------------------- |
-| E_INTENT_IS_NULL      | Intent is null                                    |
+| E_INTENT_IS_NULL      | App does not support the URL scheme               |
 | E_VALIDATION_FAILS    | Fields are required                               |
 | E_PACKAGE_NOT_FOUND   | Package not found                                 |
 
