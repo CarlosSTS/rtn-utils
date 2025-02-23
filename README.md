@@ -229,7 +229,8 @@ Opens a location-related app based on the provided URL and package name.
 
 | Option                | Description                                       |
 | --------------------- | ------------------------------------------------- |
-| includesBase64        | returns the app's icon in base64 encoding         |
+| url                   | URL to open the app with parameters               |
+| packageName           | App package name                                  |
 
 ## Usage
 
