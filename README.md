@@ -38,7 +38,7 @@ yarn add @carlossts/rtn-utils
 ![openGlobalSettings](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage06.jpeg?alt=media&token=823f08fc-ac03-4d00-bc21-6c8e71c1cb1d)
 
 ### getLocationApps method
-![getLocationApps](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage07.jpeg?alt=media&token=455c652f-a1d9-41c1-8e7c-8099b9c18c0f){width=300px}
+<img src="https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage07.jpeg?alt=media&token=455c652f-a1d9-41c1-8e7c-8099b9c18c0f" width="200" />
 
 ## API Reference
 
