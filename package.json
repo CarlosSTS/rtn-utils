@@ -1,6 +1,6 @@
 {
   "name": "@carlossts/rtn-utils",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tools and utilities for React Native with turbo modules.",
   "repository": {
     "type": "git",
