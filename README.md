@@ -37,6 +37,9 @@ yarn add @carlossts/rtn-utils
 ### openGlobalSettings method
 ![openGlobalSettings](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage06.jpeg?alt=media&token=823f08fc-ac03-4d00-bc21-6c8e71c1cb1d)
 
+### getLocationApps method
+![getLocationApps](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage07.jpeg?alt=media&token=455c652f-a1d9-41c1-8e7c-8099b9c18c0f){width=300px}
+
 ## API Reference
 
 ## Methods
@@ -53,7 +56,6 @@ Observation: If the device does not have local authentication, return success wi
 | --------------------- | ------------------------------------------------- |
 | reason                | Action title                                      |
 | description           | Action description                                |
-
 
 ## Usage
 
@@ -160,6 +162,110 @@ const App = () => {
 
 export default App;
 ```
+
+##
+
+### `getLocationApps(options: { includesBase64: boolean }): Promise<{ name: string; package: string; icon?: string; }[]>;`
+
+Retrieves a list of location-related apps with optional icons in base64 encoding.
+
+> [Verify example](https://github.com/CarlosSTS/OpenMapsApp)
+
+## Options
+
+| Option                | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| includesBase64        | returns the app's icon in base64 encoding         |
+
+## Usage
+
+```js
+import React, { useCallback, useEffect } from 'react';
+import { Alert, View } from 'react-native';
+import { RTNUtils } from '@carlossts/rtn-utils';
+
+const App = () => {
+   const getLocationApps = useCallback(async () => {
+    try {
+      const apps = await RTNUtils?.getLocationApps({
+        includesBase64: true
+      });
+      Alert.alert('total applications found:' apps.length);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      Alert.alert('openGlobalSettings Failed', errorMessage);
+    }
+  }, []);
+
+  useEffect(() => {
+    getLocationApps();
+  }, [getLocationApps]);
+
+  return <View />;
+};
+
+export default App;
+```
+
+## ErrorCode
+
+| Code                  | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| E_INTENT_IS_NULL      | Intent is null                                    |
+| E_GET_ICON_APP        | Failed to get icon app                            |
+
+##
+
+### `openAppWithLocation(options: { url: string; packageName: string }): Promise<string>;`
+
+Opens a location-related app based on the provided URL and package name.
+
+> [Verify example](https://github.com/CarlosSTS/OpenMapsApp)
+
+## Options
+
+| Option                | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| includesBase64        | returns the app's icon in base64 encoding         |
+
+## Usage
+
+```js
+import React, { useCallback, useEffect } from 'react';
+import { Alert, View } from 'react-native';
+import { RTNUtils } from '@carlossts/rtn-utils';
+
+const App = () => {
+   const openAppWithLocation = useCallback(async () => {
+    try {
+      const apps = await RTNUtils?.openAppWithLocation({
+        includesBase64: true
+      });
+      Alert.alert('App opened successfully');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      Alert.alert('openAppWithLocation Failed', errorMessage);
+    }
+  }, []);
+
+  useEffect(() => {
+    openAppWithLocation();
+  }, [openAppWithLocation]);
+
+  return <View />;
+};
+
+export default App;
+```
+
+## ErrorCode
+
+| Code                  | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| E_INTENT_IS_NULL      | Intent is null                                    |
+| E_VALIDATION_FAILS    | Fields are required                               |
+| E_PACKAGE_NOT_FOUND   | Package not found                                 |
+
 
 ## License
 
