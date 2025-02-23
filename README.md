@@ -193,7 +193,7 @@ const App = () => {
       const apps = await RTNUtils?.getLocationApps({
         includesBase64: true
       });
-      Alert.alert('total applications found:' apps.length);
+      Alert.alert('total applications found:' apps?.length);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       Alert.alert('openGlobalSettings Failed', errorMessage);
