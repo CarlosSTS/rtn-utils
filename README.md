@@ -26,13 +26,20 @@ yarn add @carlossts/rtn-utils
 
 ### authenticate method
 
-![fingerprintOrPin](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Fcarlossts-rtn-local-authentication%2Fimage01.png?alt=media&token=293510fd-170a-42bc-b1e9-d9bd06a888ec)
-![PIN](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Fcarlossts-rtn-local-authentication%2Fimage02.png?alt=media&token=81209a98-48e0-4ebe-830b-3c1aa1a54d8f)
-![fingerprintOrPattern](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Fcarlossts-rtn-local-authentication%2Fimage03.png?alt=media&token=e27c55c1-c3f4-44b7-99b7-f5dd2e069425)
-![pattern](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Fcarlossts-rtn-local-authentication%2Fimage04.png?alt=media&token=712ac8eb-8c3e-44a5-9f47-57297bffb685)
+<table>
+  <tr>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028349/image01_hia3w7.png" alt="fingerprintOrPin" width="360" /></td>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028347/image02_pqry7x.png" alt="PIN" width="360" /></td>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028345/image03_yraxmp.png" alt="pattern" width="360" /></td>
+</tr>
+</table>
 
 ### isDeviceSecure method
-![isDeviceSecure](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Fcarlossts-rtn-local-authentication%2Fimage05.png?alt=media&token=2f76b088-23c5-4f14-b248-649f3065299d)
+<table>
+  <tr>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028344/image04_shvpgp.png" alt="isDeviceSecure" width="360" /></td>
+</tr>
+</table>
 
 ### openGlobalSettings method
 ![openGlobalSettings](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage06.jpeg?alt=media&token=823f08fc-ac03-4d00-bc21-6c8e71c1cb1d)
