@@ -28,27 +28,31 @@ yarn add @carlossts/rtn-utils
 
 <table>
   <tr>
-<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028349/image01_hia3w7.png" alt="fingerprintOrPin" width="360" /></td>
-<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028347/image02_pqry7x.png" alt="PIN" width="360" /></td>
-<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028345/image03_yraxmp.png" alt="pattern" width="360" /></td>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028349/image01_hia3w7.png" alt="fingerprintOrPin" width="300" /></td>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028347/image02_pqry7x.png" alt="PIN" width="300" /></td>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028345/image03_yraxmp.png" alt="pattern" width="300" /></td>
 </tr>
 </table>
 
 ### isDeviceSecure method
 <table>
   <tr>
-<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028344/image04_shvpgp.png" alt="isDeviceSecure" width="360" /></td>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767028344/image04_shvpgp.png" alt="isDeviceSecure" width="300" /></td>
 </tr>
 </table>
 
 ### openGlobalSettings method
-![openGlobalSettings](https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage06.jpeg?alt=media&token=823f08fc-ac03-4d00-bc21-6c8e71c1cb1d)
+<table>
+  <tr>
+<td><img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767030091/image06_f2bb9t.png" alt="openGlobalSettings" width="300" /></td>
+</tr>
+</table>
 
 ### getLocationApps method
-<img src="https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage07.jpeg?alt=media&token=455c652f-a1d9-41c1-8e7c-8099b9c18c0f" width="200" />
+<img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767030091/image07_lwntgw.png" width="300" />
 
 ### openAppWithLocation method
-<img src="https://firebasestorage.googleapis.com/v0/b/portfolio-web-7fbff.appspot.com/o/libs_npm%2Frtn-utils%2Fimage08.jpeg?alt=media&token=7c016f39-b8b0-4d0a-91dc-c393f12277d6" width="200" />
+<img src="https://res.cloudinary.com/dbw8igay3/image/upload/v1767030092/image08_u1yacs.png" width="300" />
 
 ## API Reference
 
