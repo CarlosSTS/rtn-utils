@@ -82,7 +82,7 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
             return
         }
 
-        val currentActivity = currentActivity
+        val currentActivity = reactApplicationContext.currentActivity
         if (currentActivity == null) {
             promise.reject(E_ACTIVITY_DOES_NOT_EXIST, "Activity does not exist.")
             return
@@ -113,8 +113,8 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
     }
    
     override fun openGlobalSettings(action: String, promise: Promise) {
-        val currentActivity = currentActivity
-    
+        val currentActivity = reactApplicationContext.currentActivity
+
         if (currentActivity == null) {
             promise.reject(E_ACTIVITY_DOES_NOT_EXIST, "Activity does not exist.")
             return
@@ -138,12 +138,7 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         val includesBase64 = if (options?.hasKey("includesBase64") == true) options.getBoolean("includesBase64") else false    
         val pm = reactApplicationContext.packageManager
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q="))
-    
-        if (intent == null) {
-            promise.reject(E_INTENT_IS_NULL, "Intent is null.")
-            return
-        }
-    
+
         val appsList = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
     
         if (appsList.isEmpty()) {
