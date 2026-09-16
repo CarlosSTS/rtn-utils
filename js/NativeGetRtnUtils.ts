@@ -151,10 +151,11 @@ export interface Spec extends TurboModule {
    *   - `lastUsedTime` (number): epoch milliseconds of last use, `0` if never / not
    *     granted.
    *   - `launchCount` (number): number of times moved to foreground in the period.
-   *   - `appSizeBytes` (number): APK + OBB size. `-1` when unavailable.
-   *   - `dataSizeBytes` (number): app data size. `-1` when unavailable.
-   *   - `cacheSizeBytes` (number): cache size. `-1` when unavailable.
-   *   - `totalSizeBytes` (number): `appSizeBytes + dataSizeBytes + cacheSizeBytes`.
+   *   - `appSizeBytes` (number): APK + OBB + compiled code size. On Xiaomi devices,
+   *     APK files only, matching MIUI/HyperOS Settings. `-1` when unavailable.
+   *   - `dataSizeBytes` (number): app data size, cache included. `-1` when unavailable.
+   *   - `cacheSizeBytes` (number): cache size (already part of `dataSizeBytes`). `-1` when unavailable.
+   *   - `totalSizeBytes` (number): `appSizeBytes + dataSizeBytes`.
    *     `-1` when unavailable.
    *
    * @example

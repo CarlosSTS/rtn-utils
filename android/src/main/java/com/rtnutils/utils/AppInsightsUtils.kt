@@ -15,6 +15,7 @@ import android.provider.Settings
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
+import java.io.File
 
 /**
  * Collects installed-app metadata plus (when "Usage access" is granted) per-app
@@ -35,6 +36,24 @@ object AppInsightsUtils {
         val usagePeriod: String = "week",
         val limit: Int = 0,
     )
+
+    /**
+     * MIUI/HyperOS Settings report an app's size as its APK files only, leaving
+     * out the compiled code (oat/odex) that StorageStats.appBytes includes.
+     */
+    private fun isXiaomi(): Boolean =
+        Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)
+
+    private fun apkBytes(appInfo: ApplicationInfo): Long {
+        val paths = listOfNotNull(appInfo.sourceDir) + (appInfo.splitSourceDirs?.toList() ?: emptyList())
+        return paths.sumOf { path ->
+            try {
+                File(path).length()
+            } catch (e: Exception) {
+                0L
+            }
+        }
+    }
 
     fun hasUsageAccessPermission(context: Context): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
@@ -241,7 +260,11 @@ object AppInsightsUtils {
                         packageName,
                         Process.myUserHandle(),
                     )
-                    appSize = stats.appBytes
+                    appSize = if (isXiaomi()) {
+                        apkBytes(appInfo).takeIf { it > 0 } ?: stats.appBytes
+                    } else {
+                        stats.appBytes
+                    }
                     dataSize = stats.dataBytes
                     cacheSize = stats.cacheBytes
                 } catch (e: Exception) {
@@ -336,9 +359,10 @@ object AppInsightsUtils {
         val dataSizeBytes: Long,
         val cacheSizeBytes: Long,
     ) {
+        // StorageStats.dataBytes already includes cacheBytes, so cache is not added again.
         fun totalSizeBytes(): Long {
-            if (appSizeBytes < 0 && dataSizeBytes < 0 && cacheSizeBytes < 0) return -1L
-            return maxOf(appSizeBytes, 0L) + maxOf(dataSizeBytes, 0L) + maxOf(cacheSizeBytes, 0L)
+            if (appSizeBytes < 0 && dataSizeBytes < 0) return -1L
+            return maxOf(appSizeBytes, 0L) + maxOf(dataSizeBytes, 0L)
         }
 
         fun toMap(includeIcons: Boolean): WritableMap = Arguments.createMap().apply {

@@ -22,6 +22,65 @@ or
 yarn add @carlossts/rtn-utils
 ```
 
+## Local development (using the library in another React Native project)
+
+To test unpublished changes in a React Native app, use a local package. The examples below assume this layout:
+
+```
+projects/
+├── rtn-utils/       # this library
+└── my-app/          # React Native app that consumes it
+```
+
+### Tarball (`npm pack`)
+
+`npm pack` produces the same package that npm would publish, so the app uses the library exactly as it would after a release.
+
+1. Generate the tarball in the library folder:
+
+   ```bash
+   cd rtn-utils
+   npm pack
+   # -> carlossts-rtn-utils-<version>.tgz (version from package.json, e.g. 1.1.0)
+   ```
+
+2. Point the dependency to the file in the app's `package.json`:
+
+   ```json
+   "dependencies": {
+     "@carlossts/rtn-utils": "file:../rtn-utils/carlossts-rtn-utils-1.1.0.tgz"
+   }
+   ```
+
+3. Install and rebuild the app. Codegen and the native code run at build time, so a clean build is required:
+
+   ```bash
+   cd ../my-app
+   yarn install            # or npm install
+   cd android && ./gradlew clean && rm -rf app/.cxx && cd ..
+   yarn android
+   ```
+
+To pick up new changes:
+
+1. Run `npm pack` again in the library folder.
+2. Reinstall the tarball in the app:
+   - If the version in `package.json` changed, run `yarn add file:../rtn-utils/carlossts-rtn-utils-<new-version>.tgz`. This command also updates the path in the app's `package.json`.
+   - If the version didn't change, Yarn 1 keeps installing the old copy, even after `yarn install` or `yarn cache clean @carlossts/rtn-utils`. Delete its cached copies (including the extracted ones in `.tmp`), then add the file again:
+
+     ```bash
+     cd ../my-app
+     CACHE="$(yarn cache dir)"
+     find "$CACHE" -maxdepth 1 -name 'npm-@carlossts-rtn-utils-*' -exec rm -rf {} +
+     find "$CACHE/.tmp" -mindepth 2 -maxdepth 2 -name package.json -exec grep -l '"@carlossts/rtn-utils"' {} + 2>/dev/null | xargs -r -n1 dirname | xargs -r rm -rf
+     yarn add file:../rtn-utils/carlossts-rtn-utils-<version>.tgz
+     ```
+
+     Check the result: the `resolved` hash for `@carlossts/rtn-utils` in `yarn.lock` must change whenever the tarball content changes.
+3. Clean and rebuild the app (step 3 above).
+
+> `*.tgz` files are ignored by this repo's `.gitignore`. Don't commit them.
+
 ## UI
 
 ### authenticate method
@@ -366,10 +425,10 @@ Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed
 | `usageTimeMs`      | number  | Foreground time in the period (`0` if not granted / unused)          |
 | `lastUsedTime`     | number  | Epoch ms of last use (`0` if never / not granted)                    |
 | `launchCount`      | number  | Times moved to foreground in the period                             |
-| `appSizeBytes`     | number  | APK + OBB size (`-1` when unavailable)                               |
-| `dataSizeBytes`    | number  | App data size (`-1` when unavailable)                                |
-| `cacheSizeBytes`   | number  | Cache size (`-1` when unavailable)                                   |
-| `totalSizeBytes`   | number  | Sum of the three (`-1` when all unavailable)                         |
+| `appSizeBytes`     | number  | APK + OBB + compiled code size; APK files only on Xiaomi, matching MIUI/HyperOS Settings (`-1` when unavailable) |
+| `dataSizeBytes`    | number  | App data size, cache included (`-1` when unavailable)                |
+| `cacheSizeBytes`   | number  | Cache size, already part of `dataSizeBytes` (`-1` when unavailable)  |
+| `totalSizeBytes`   | number  | `appSizeBytes + dataSizeBytes` (`-1` when both unavailable)          |
 
 ## Usage
 
