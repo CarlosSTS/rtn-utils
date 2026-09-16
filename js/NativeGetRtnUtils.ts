@@ -118,7 +118,8 @@ export interface Spec extends TurboModule {
    *
    * @param options Optional parameters:
    * - `includeSystemApps` (boolean): include apps flagged as system apps that also
-   *   have a launcher. Default `false`.
+   *   have a launcher. System apps updated through the store are always included.
+   *   Default `false`.
    * - `includeIcons` (boolean): include each app icon as a base64 data URI. This is
    *   significantly heavier — enable only when needed. Default `false`.
    * - `sortBy` (string): `"totalSize"` (default), `"usageTime"`, `"lastUsed"` or
@@ -152,7 +153,7 @@ export interface Spec extends TurboModule {
    *     granted.
    *   - `launchCount` (number): number of times moved to foreground in the period.
    *   - `appSizeBytes` (number): APK + OBB + compiled code size. On Xiaomi devices,
-   *     APK files only, matching MIUI/HyperOS Settings. `-1` when unavailable.
+   *     install directory files without compiled code, matching MIUI/HyperOS Settings. `-1` when unavailable.
    *   - `dataSizeBytes` (number): app data size, cache included. `-1` when unavailable.
    *   - `cacheSizeBytes` (number): cache size (already part of `dataSizeBytes`). `-1` when unavailable.
    *   - `totalSizeBytes` (number): `appSizeBytes + dataSizeBytes`.

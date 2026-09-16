@@ -38,19 +38,34 @@ object AppInsightsUtils {
     )
 
     /**
-     * MIUI/HyperOS Settings report an app's size as its APK files only, leaving
-     * out the compiled code (oat/odex) that StorageStats.appBytes includes.
+     * MIUI/HyperOS Settings report an app's size as the files in its install
+     * directory (APKs, extracted native libs, .dm), leaving out the compiled
+     * code in oat/ that StorageStats.appBytes includes.
      */
     private fun isXiaomi(): Boolean =
         Build.MANUFACTURER.equals("Xiaomi", ignoreCase = true)
 
-    private fun apkBytes(appInfo: ApplicationInfo): Long {
-        val paths = listOfNotNull(appInfo.sourceDir) + (appInfo.splitSourceDirs?.toList() ?: emptyList())
-        return paths.sumOf { path ->
-            try {
-                File(path).length()
-            } catch (e: Exception) {
-                0L
+    private fun installDirBytes(appInfo: ApplicationInfo): Long {
+        val sourceDir = appInfo.sourceDir ?: return 0L
+        val dir = File(sourceDir).parentFile ?: return 0L
+        val listed = dirBytes(dir)
+        if (listed > 0) return listed
+        // Directory not listable: fall back to the APK files alone.
+        val paths = listOf(sourceDir) + (appInfo.splitSourceDirs?.toList() ?: emptyList())
+        return paths.sumOf { File(it).length() }
+    }
+
+    private fun dirBytes(dir: File): Long {
+        val children = try {
+            dir.listFiles()
+        } catch (e: Exception) {
+            null
+        } ?: return 0L
+        return children.sumOf { child ->
+            when {
+                child.isDirectory && child.name != "oat" -> dirBytes(child)
+                child.isFile -> child.length()
+                else -> 0L
             }
         }
     }
@@ -150,7 +165,8 @@ object AppInsightsUtils {
                 launchCount = launches[pkg] ?: 0,
                 storageStatsManager = storageStatsManager,
             ) ?: continue
-            if (row.isSystemApp && !options.includeSystemApps) continue
+            // System apps updated through the store (YouTube, Chrome...) are listed like user apps.
+            if (row.isSystemApp && !row.isUpdatedSystemApp && !options.includeSystemApps) continue
             rows.add(row)
         }
 
@@ -228,6 +244,8 @@ object AppInsightsUtils {
 
             val isSystemApp = (appInfo.flags and
                 (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+            val isUpdatedSystemApp =
+                (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
 
             val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 pkgInfo.longVersionCode
@@ -261,7 +279,7 @@ object AppInsightsUtils {
                         Process.myUserHandle(),
                     )
                     appSize = if (isXiaomi()) {
-                        apkBytes(appInfo).takeIf { it > 0 } ?: stats.appBytes
+                        installDirBytes(appInfo).takeIf { it > 0 } ?: stats.appBytes
                     } else {
                         stats.appBytes
                     }
@@ -289,6 +307,7 @@ object AppInsightsUtils {
                 versionCode = versionCode,
                 icon = icon,
                 isSystemApp = isSystemApp,
+                isUpdatedSystemApp = isUpdatedSystemApp,
                 enabled = appInfo.enabled,
                 firstInstallTime = pkgInfo.firstInstallTime,
                 lastUpdateTime = pkgInfo.lastUpdateTime,
@@ -345,6 +364,7 @@ object AppInsightsUtils {
         val versionCode: Long,
         val icon: String?,
         val isSystemApp: Boolean,
+        val isUpdatedSystemApp: Boolean,
         val enabled: Boolean,
         val firstInstallTime: Long,
         val lastUpdateTime: Long,

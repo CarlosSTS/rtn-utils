@@ -397,7 +397,7 @@ Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed
 
 | Option              | Type    | Default       | Description                                                        |
 | ------------------- | ------- | ------------- | ---------------------------------------------------------------- |
-| `includeSystemApps` | boolean | `false`       | Include system apps that also have a launcher                     |
+| `includeSystemApps` | boolean | `false`       | Include system apps that also have a launcher (system apps updated through the store are always included) |
 | `includeIcons`      | boolean | `false`       | Attach each icon as a base64 data URI (noticeably heavier)        |
 | `sortBy`            | string  | `"totalSize"` | `"totalSize"` \| `"usageTime"` \| `"lastUsed"` \| `"name"`        |
 | `usagePeriod`       | string  | `"week"`      | Usage window: `"day"` \| `"week"` \| `"month"` \| `"year"`        |
@@ -425,7 +425,7 @@ Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed
 | `usageTimeMs`      | number  | Foreground time in the period (`0` if not granted / unused)          |
 | `lastUsedTime`     | number  | Epoch ms of last use (`0` if never / not granted)                    |
 | `launchCount`      | number  | Times moved to foreground in the period                             |
-| `appSizeBytes`     | number  | APK + OBB + compiled code size; APK files only on Xiaomi, matching MIUI/HyperOS Settings (`-1` when unavailable) |
+| `appSizeBytes`     | number  | APK + OBB + compiled code size; install directory without compiled code on Xiaomi, matching MIUI/HyperOS Settings (`-1` when unavailable) |
 | `dataSizeBytes`    | number  | App data size, cache included (`-1` when unavailable)                |
 | `cacheSizeBytes`   | number  | Cache size, already part of `dataSizeBytes` (`-1` when unavailable)  |
 | `totalSizeBytes`   | number  | `appSizeBytes + dataSizeBytes` (`-1` when both unavailable)          |
