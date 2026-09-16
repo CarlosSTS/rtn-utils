@@ -118,8 +118,7 @@ export interface Spec extends TurboModule {
    *
    * @param options Optional parameters:
    * - `includeSystemApps` (boolean): include apps flagged as system apps that also
-   *   have a launcher. System apps updated through the store are always included.
-   *   Default `false`.
+   *   have a launcher. Default `false`.
    * - `includeIcons` (boolean): include each app icon as a base64 data URI. This is
    *   significantly heavier — enable only when needed. Default `false`.
    * - `sortBy` (string): `"totalSize"` (default), `"usageTime"`, `"lastUsed"` or

@@ -165,8 +165,7 @@ object AppInsightsUtils {
                 launchCount = launches[pkg] ?: 0,
                 storageStatsManager = storageStatsManager,
             ) ?: continue
-            // System apps updated through the store (YouTube, Chrome...) are listed like user apps.
-            if (row.isSystemApp && !row.isUpdatedSystemApp && !options.includeSystemApps) continue
+            if (row.isSystemApp && !options.includeSystemApps) continue
             rows.add(row)
         }
 
@@ -244,8 +243,6 @@ object AppInsightsUtils {
 
             val isSystemApp = (appInfo.flags and
                 (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
-            val isUpdatedSystemApp =
-                (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
 
             val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 pkgInfo.longVersionCode
@@ -307,7 +304,6 @@ object AppInsightsUtils {
                 versionCode = versionCode,
                 icon = icon,
                 isSystemApp = isSystemApp,
-                isUpdatedSystemApp = isUpdatedSystemApp,
                 enabled = appInfo.enabled,
                 firstInstallTime = pkgInfo.firstInstallTime,
                 lastUpdateTime = pkgInfo.lastUpdateTime,
@@ -364,7 +360,6 @@ object AppInsightsUtils {
         val versionCode: Long,
         val icon: String?,
         val isSystemApp: Boolean,
-        val isUpdatedSystemApp: Boolean,
         val enabled: Boolean,
         val firstInstallTime: Long,
         val lastUpdateTime: Long,

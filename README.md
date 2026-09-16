@@ -397,7 +397,7 @@ Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed
 
 | Option              | Type    | Default       | Description                                                        |
 | ------------------- | ------- | ------------- | ---------------------------------------------------------------- |
-| `includeSystemApps` | boolean | `false`       | Include system apps that also have a launcher (system apps updated through the store are always included) |
+| `includeSystemApps` | boolean | `false`       | Include system apps that also have a launcher                     |
 | `includeIcons`      | boolean | `false`       | Attach each icon as a base64 data URI (noticeably heavier)        |
 | `sortBy`            | string  | `"totalSize"` | `"totalSize"` \| `"usageTime"` \| `"lastUsed"` \| `"name"`        |
 | `usagePeriod`       | string  | `"week"`      | Usage window: `"day"` \| `"week"` \| `"month"` \| `"year"`        |
