@@ -287,6 +287,141 @@ export default App;
 | E_VALIDATION_FAILS    | Fields are required                               |
 | E_PACKAGE_NOT_FOUND   | Package not found                                 |
 
+##
+
+### App insights (`getInstalledApps`, memory & usage access)
+
+List the launchable apps installed on the device with metadata and — when the
+**Usage access** permission is granted — per-app foreground time and storage
+footprint.
+
+> **About "memory consumption":** Android does **not** expose the real-time RAM
+> usage of third-party apps to regular (non-root, Play-compliant) apps.
+> `getRunningAppProcesses()` only returns your own process, and `/proc` is
+> `hidepid`-restricted since Android 7. So this API reports **storage size**
+> (`totalSizeBytes`) and **foreground time** (`usageTimeMs`) as the per-app
+> "consumption" metrics, plus a device-wide RAM snapshot via
+> [`getDeviceMemoryInfo`](#getdevicememoryinfo-promise-).
+
+> **Play Store compliance:** the library only enumerates apps that expose a
+> launcher activity, declaring a `<queries>` element for `MAIN`/`LAUNCHER`
+> intents. It does **not** use `QUERY_ALL_PACKAGES`, so no Play Console
+> declaration is required. It does declare `android.permission.PACKAGE_USAGE_STATS`
+> (a special "appop" permission the user grants manually); if your app targets
+> Google Play, disclose this in your listing and privacy policy.
+
+#### `hasUsageAccessPermission(): Promise<boolean>`
+
+Resolves `true` when the app already holds the `PACKAGE_USAGE_STATS` permission.
+This permission cannot be requested with a runtime dialog.
+
+#### `openUsageAccessSettings(): Promise<boolean>`
+
+Opens the system **Settings → Usage access** screen so the user can grant the
+permission. Resolves `true` if the screen was opened.
+
+#### `getDeviceMemoryInfo(): Promise<{ ... }>`
+
+Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed.
+
+| Field            | Type    | Description                                        |
+| ---------------- | ------- | ------------------------------------------------- |
+| `totalBytes`     | number  | Total physical RAM                                |
+| `availableBytes` | number  | RAM available to start new processes             |
+| `usedBytes`      | number  | `totalBytes - availableBytes`                    |
+| `lowMemory`      | boolean | Whether the system is under memory pressure      |
+| `thresholdBytes` | number  | Low-memory threshold used by the system          |
+
+#### `getInstalledApps(options?): Promise<{ usageAccessGranted, totalCount, apps }>`
+
+## Options
+
+| Option              | Type    | Default       | Description                                                        |
+| ------------------- | ------- | ------------- | ---------------------------------------------------------------- |
+| `includeSystemApps` | boolean | `false`       | Include system apps that also have a launcher                     |
+| `includeIcons`      | boolean | `false`       | Attach each icon as a base64 data URI (noticeably heavier)        |
+| `sortBy`            | string  | `"totalSize"` | `"totalSize"` \| `"usageTime"` \| `"lastUsed"` \| `"name"`        |
+| `usagePeriod`       | string  | `"week"`      | Usage window: `"day"` \| `"week"` \| `"month"` \| `"year"`        |
+| `limit`             | number  | `0`           | Max apps returned after sorting (`0` = all)                       |
+
+### Result
+
+`usageAccessGranted` (boolean), `totalCount` (number, before `limit`) and `apps[]`:
+
+| Field              | Type    | Description                                                             |
+| ------------------ | ------- | -------------------------------------------------------------------- |
+| `packageName`      | string  | Application id                                                         |
+| `appName`          | string  | User-visible label                                                    |
+| `versionName`      | string  | May be empty when the app declares none                              |
+| `versionCode`      | number  | `longVersionCode` on API 28+                                          |
+| `icon`             | string? | base64 data URI, only when `includeIcons` is `true`                  |
+| `isSystemApp`      | boolean | `FLAG_SYSTEM` / `FLAG_UPDATED_SYSTEM_APP`                            |
+| `enabled`          | boolean | Whether the app is currently enabled                                 |
+| `firstInstallTime` | number  | Epoch ms                                                             |
+| `lastUpdateTime`   | number  | Epoch ms                                                             |
+| `targetSdkVersion` | number  | App `targetSdkVersion`                                               |
+| `minSdkVersion`    | number  | App `minSdkVersion` (`0` on API < 24)                                |
+| `category`         | string  | `"game"`, `"audio"`, `"productivity"`, … or `"undefined"`            |
+| `permissionsCount` | number  | Number of permissions the app requests                              |
+| `usageTimeMs`      | number  | Foreground time in the period (`0` if not granted / unused)          |
+| `lastUsedTime`     | number  | Epoch ms of last use (`0` if never / not granted)                    |
+| `launchCount`      | number  | Times moved to foreground in the period                             |
+| `appSizeBytes`     | number  | APK + OBB size (`-1` when unavailable)                               |
+| `dataSizeBytes`    | number  | App data size (`-1` when unavailable)                                |
+| `cacheSizeBytes`   | number  | Cache size (`-1` when unavailable)                                   |
+| `totalSizeBytes`   | number  | Sum of the three (`-1` when all unavailable)                         |
+
+## Usage
+
+```js
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, View } from 'react-native';
+import { RTNUtils } from '@carlossts/rtn-utils';
+
+const App = () => {
+  const [apps, setApps] = useState([]);
+
+  const loadApps = useCallback(async () => {
+    try {
+      const granted = await RTNUtils?.hasUsageAccessPermission();
+      if (!granted) {
+        Alert.alert(
+          'Permission needed',
+          'Enable "Usage access" to see per-app usage time and size.',
+          [{ text: 'Open settings', onPress: () => RTNUtils?.openUsageAccessSettings() }],
+        );
+      }
+
+      const result = await RTNUtils?.getInstalledApps({
+        includeIcons: true,
+        sortBy: 'totalSize',
+        usagePeriod: 'week',
+        limit: 30,
+      });
+      setApps(result?.apps ?? []);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('getInstalledApps Failed', message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadApps();
+  }, [loadApps]);
+
+  return <View />;
+};
+
+export default App;
+```
+
+## ErrorCode
+
+| Code                   | Description                                       |
+| ---------------------- | ------------------------------------------------- |
+| E_GET_INSTALLED_APPS   | Failed to list installed apps                     |
+| E_GET_MEMORY_INFO      | Failed to read device memory info                 |
+| E_FAILED_TO_OPEN_SETTINGS | Failed to open usage access settings           |
 
 ## License
 
