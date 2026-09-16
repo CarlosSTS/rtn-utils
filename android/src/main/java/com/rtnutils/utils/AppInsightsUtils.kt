@@ -302,7 +302,7 @@ object AppInsightsUtils {
                 firstInstallTime = pkgInfo.firstInstallTime,
                 lastUpdateTime = pkgInfo.lastUpdateTime,
                 targetSdkVersion = appInfo.targetSdkVersion,
-                minSdkVersion = minSdk,
+                minSdkVersion = appInfo.minSdkVersion,
                 category = category,
                 permissionsCount = pkgInfo.requestedPermissions?.size ?: 0,
                 usageTimeMs = usage?.get(0) ?: 0L,

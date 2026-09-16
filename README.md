@@ -285,7 +285,6 @@ export default App;
 | Code                  | Description                                       |
 | --------------------- | ------------------------------------------------- |
 | E_INTENT_IS_NULL      | Intent is null                                    |
-| E_GET_ICON_APP        | Failed to get icon app                            |
 
 ##
 
