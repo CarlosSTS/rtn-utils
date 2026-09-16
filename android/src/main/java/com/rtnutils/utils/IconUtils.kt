@@ -1,11 +1,9 @@
 package com.rtnutils.utils
 
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.BitmapDrawable
-import android.net.Uri
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 

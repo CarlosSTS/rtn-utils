@@ -251,12 +251,6 @@ object AppInsightsUtils {
                 pkgInfo.versionCode.toLong()
             }
 
-            val minSdk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                appInfo.minSdkVersion
-            } else {
-                0
-            }
-
             val category = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 categoryToString(appInfo.category)
             } else {
