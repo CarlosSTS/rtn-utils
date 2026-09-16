@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
@@ -97,6 +98,18 @@ object AppInsightsUtils {
     fun openUsageAccessSettings(context: Context): Boolean {
         return try {
             val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun openAppSettings(context: Context, packageName: String): Boolean {
+        return try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.data = Uri.fromParts("package", packageName, null)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(intent)
             true

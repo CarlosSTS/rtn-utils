@@ -378,6 +378,12 @@ This permission cannot be requested with a runtime dialog.
 Opens the system **Settings → Usage access** screen so the user can grant the
 permission. Resolves `true` if the screen was opened.
 
+#### `openAppSettings(packageName: string): Promise<boolean>`
+
+Opens the system **App info** screen for `packageName`
+(`Settings.ACTION_APPLICATION_DETAILS_SETTINGS`). Resolves `true` if the screen
+was opened.
+
 #### `getDeviceMemoryInfo(): Promise<{ ... }>`
 
 Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed.

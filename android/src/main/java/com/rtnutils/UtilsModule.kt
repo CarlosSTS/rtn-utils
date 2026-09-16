@@ -221,6 +221,19 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         }
     }
 
+    override fun openAppSettings(packageName: String, promise: Promise) {
+        if (packageName.isEmpty()) {
+            promise.reject(E_FAILED_TO_OPEN_SETTINGS, "Package name is empty.")
+            return
+        }
+        val opened = AppInsightsUtils.openAppSettings(reactApplicationContext, packageName)
+        if (opened) {
+            promise.resolve(true)
+        } else {
+            promise.reject(E_FAILED_TO_OPEN_SETTINGS, "Failed to open app settings.")
+        }
+    }
+
     override fun getDeviceMemoryInfo(promise: Promise) {
         try {
             promise.resolve(AppInsightsUtils.getDeviceMemoryInfo(reactApplicationContext))

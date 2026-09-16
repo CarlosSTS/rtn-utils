@@ -82,6 +82,16 @@ export interface Spec extends TurboModule {
   openUsageAccessSettings(): Promise<boolean>;
 
   /**
+   * Opens the system "App info" screen
+   * (`Settings.ACTION_APPLICATION_DETAILS_SETTINGS`) for the given package, where
+   * the user can force stop, clear storage, manage permissions or uninstall it.
+   *
+   * @param packageName The package name of the app, e.g. `"com.whatsapp"`.
+   * @returns A Promise resolving to `true` if the settings screen was opened.
+   */
+  openAppSettings(packageName: string): Promise<boolean>;
+
+  /**
    * Returns a device-wide RAM snapshot from `ActivityManager.MemoryInfo`.
    *
    * Android does not expose per-app RAM usage of third-party apps to regular
