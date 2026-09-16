@@ -37,3 +37,6 @@ yarn.lock
 
 # Gradlew
 .gradle
+
+# npm pack tarballs
+*.tgz

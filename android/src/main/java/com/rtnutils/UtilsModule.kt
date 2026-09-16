@@ -1,29 +1,19 @@
 package com.rtnutils;
+import com.rtnutils.utils.AppInsightsUtils
 import com.rtnutils.utils.IconUtils
 
-import com.rtnutils.NativeGetRtnUtilsSpec
 import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.provider.Settings
-import android.util.Log
 import com.facebook.react.bridge.*
-import com.facebook.react.module.annotations.ReactModule
-import com.facebook.react.turbomodule.core.interfaces.TurboModule
+import java.util.concurrent.Executors
 
 class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec(reactContext) {
 
     companion object {
-        enum class SettingsAction {
-            LOCATION,
-            WIFI,
-            BLUETOOTH,
-            SOUND,
-            DISPLAY
-        }
         const val NAME = "RTNUtils"
         private const val AUTH_REQUEST = 18864
         private const val E_ACTIVITY_DOES_NOT_EXIST = "E_ACTIVITY_DOES_NOT_EXIST"
@@ -33,14 +23,17 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         private const val WITHOUT_AUTHENTICATION = "WITHOUT_AUTHENTICATION"
         private const val E_ACTION_IS_EMPTY = "E_ACTION_IS_EMPTY"
         private const val E_INTENT_IS_NULL = "E_INTENT_IS_NULL"
-        private const val E_GET_ICON_APP = "E_GET_ICON_APP"
         private const val E_FAILED_TO_OPEN_SETTINGS = "E_FAILED_TO_OPEN_SETTINGS"
         private const val E_PACKAGE_NOT_FOUND = "E_PACKAGE_NOT_FOUND"
         private const val E_VALIDATION_FAILS = "E_VALIDATION_FAILS"
+        private const val E_GET_INSTALLED_APPS = "E_GET_INSTALLED_APPS"
+        private const val E_GET_MEMORY_INFO = "E_GET_MEMORY_INFO"
     }
 
     private val keyguardManager: KeyguardManager =
         reactContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+
+    private val backgroundExecutor = Executors.newSingleThreadExecutor()
 
     private var authPromise: Promise? = null
 
@@ -140,12 +133,7 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q="))
 
         val appsList = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-    
-        if (appsList.isEmpty()) {
-            promise.resolve(WritableNativeArray())
-            return
-        }
-    
+
         val result = WritableNativeArray()
     
         for (resolveInfo in appsList) {
@@ -158,11 +146,12 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
                 putString("package", packageName)
 
                 if (includesBase64) {
+                    // Icon is optional: an app whose icon can't be read is still listed.
                     try {
                         val appIcon = pm.getApplicationIcon(packageName)
                         putString("icon", IconUtils.getAppIconBase64(appIcon))
                     } catch (e: Exception) {
-                        promise.reject(E_GET_ICON_APP, "Error while getting app icon for package: $packageName", e)
+                        // leave icon out
                     }
                 }
             }
@@ -215,8 +204,55 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         }
     }
 
+    override fun hasUsageAccessPermission(promise: Promise) {
+        try {
+            promise.resolve(AppInsightsUtils.hasUsageAccessPermission(reactApplicationContext))
+        } catch (e: Exception) {
+            promise.reject(E_GET_INSTALLED_APPS, e.message ?: "Failed to read usage access state.", e)
+        }
+    }
 
-    private fun ReadableMap.getString(key: String): String? {
-        return if (hasKey(key) && getType(key) == ReadableType.String) getString(key) else null
+    override fun openUsageAccessSettings(promise: Promise) {
+        val opened = AppInsightsUtils.openUsageAccessSettings(reactApplicationContext)
+        if (opened) {
+            promise.resolve(true)
+        } else {
+            promise.reject(E_FAILED_TO_OPEN_SETTINGS, "Failed to open usage access settings.")
+        }
+    }
+
+    override fun getDeviceMemoryInfo(promise: Promise) {
+        try {
+            promise.resolve(AppInsightsUtils.getDeviceMemoryInfo(reactApplicationContext))
+        } catch (e: Exception) {
+            promise.reject(E_GET_MEMORY_INFO, e.message ?: "Failed to read device memory info.", e)
+        }
+    }
+
+    override fun getInstalledApps(options: ReadableMap?, promise: Promise) {
+        val parsed = AppInsightsUtils.Options(
+            includeSystemApps = options?.getBooleanOrDefault("includeSystemApps", false) ?: false,
+            includeIcons = options?.getBooleanOrDefault("includeIcons", false) ?: false,
+            sortBy = options?.getString("sortBy") ?: "totalSize",
+            usagePeriod = options?.getString("usagePeriod") ?: "week",
+            limit = options?.getIntOrDefault("limit", 0) ?: 0,
+        )
+
+        backgroundExecutor.execute {
+            try {
+                val result = AppInsightsUtils.getInstalledApps(reactApplicationContext, parsed)
+                promise.resolve(result)
+            } catch (e: Exception) {
+                promise.reject(E_GET_INSTALLED_APPS, e.message ?: "Failed to list installed apps.", e)
+            }
+        }
+    }
+
+    private fun ReadableMap.getBooleanOrDefault(key: String, fallback: Boolean): Boolean {
+        return if (hasKey(key) && getType(key) == ReadableType.Boolean) getBoolean(key) else fallback
+    }
+
+    private fun ReadableMap.getIntOrDefault(key: String, fallback: Int): Int {
+        return if (hasKey(key) && getType(key) == ReadableType.Number) getInt(key) else fallback
     }
 }

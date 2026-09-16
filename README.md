@@ -22,6 +22,65 @@ or
 yarn add @carlossts/rtn-utils
 ```
 
+## Local development (using the library in another React Native project)
+
+To test unpublished changes in a React Native app, use a local package. The examples below assume this layout:
+
+```
+projects/
+├── rtn-utils/       # this library
+└── my-app/          # React Native app that consumes it
+```
+
+### Tarball (`npm pack`)
+
+`npm pack` produces the same package that npm would publish, so the app uses the library exactly as it would after a release.
+
+1. Generate the tarball in the library folder:
+
+   ```bash
+   cd rtn-utils
+   npm pack
+   # -> carlossts-rtn-utils-<version>.tgz (version from package.json, e.g. 1.1.0)
+   ```
+
+2. Point the dependency to the file in the app's `package.json`:
+
+   ```json
+   "dependencies": {
+     "@carlossts/rtn-utils": "file:../rtn-utils/carlossts-rtn-utils-1.1.0.tgz"
+   }
+   ```
+
+3. Install and rebuild the app. Codegen and the native code run at build time, so a clean build is required:
+
+   ```bash
+   cd ../my-app
+   yarn install            # or npm install
+   cd android && ./gradlew clean && rm -rf app/.cxx && cd ..
+   yarn android
+   ```
+
+To pick up new changes:
+
+1. Run `npm pack` again in the library folder.
+2. Reinstall the tarball in the app:
+   - If the version in `package.json` changed, run `yarn add file:../rtn-utils/carlossts-rtn-utils-<new-version>.tgz`. This command also updates the path in the app's `package.json`.
+   - If the version didn't change, Yarn 1 keeps installing the old copy, even after `yarn install` or `yarn cache clean @carlossts/rtn-utils`. Delete its cached copies (including the extracted ones in `.tmp`), then add the file again:
+
+     ```bash
+     cd ../my-app
+     CACHE="$(yarn cache dir)"
+     find "$CACHE" -maxdepth 1 -name 'npm-@carlossts-rtn-utils-*' -exec rm -rf {} +
+     find "$CACHE/.tmp" -mindepth 2 -maxdepth 2 -name package.json -exec grep -l '"@carlossts/rtn-utils"' {} + 2>/dev/null | xargs -r -n1 dirname | xargs -r rm -rf
+     yarn add file:../rtn-utils/carlossts-rtn-utils-<version>.tgz
+     ```
+
+     Check the result: the `resolved` hash for `@carlossts/rtn-utils` in `yarn.lock` must change whenever the tarball content changes.
+3. Clean and rebuild the app (step 3 above).
+
+> `*.tgz` files are ignored by this repo's `.gitignore`. Don't commit them.
+
 ## UI
 
 ### authenticate method
@@ -287,6 +346,141 @@ export default App;
 | E_VALIDATION_FAILS    | Fields are required                               |
 | E_PACKAGE_NOT_FOUND   | Package not found                                 |
 
+##
+
+### App insights (`getInstalledApps`, memory & usage access)
+
+List the launchable apps installed on the device with metadata and — when the
+**Usage access** permission is granted — per-app foreground time and storage
+footprint.
+
+> **About "memory consumption":** Android does **not** expose the real-time RAM
+> usage of third-party apps to regular (non-root, Play-compliant) apps.
+> `getRunningAppProcesses()` only returns your own process, and `/proc` is
+> `hidepid`-restricted since Android 7. So this API reports **storage size**
+> (`totalSizeBytes`) and **foreground time** (`usageTimeMs`) as the per-app
+> "consumption" metrics, plus a device-wide RAM snapshot via
+> [`getDeviceMemoryInfo`](#getdevicememoryinfo-promise-).
+
+> **Play Store compliance:** the library only enumerates apps that expose a
+> launcher activity, declaring a `<queries>` element for `MAIN`/`LAUNCHER`
+> intents. It does **not** use `QUERY_ALL_PACKAGES`, so no Play Console
+> declaration is required. It does declare `android.permission.PACKAGE_USAGE_STATS`
+> (a special "appop" permission the user grants manually); if your app targets
+> Google Play, disclose this in your listing and privacy policy.
+
+#### `hasUsageAccessPermission(): Promise<boolean>`
+
+Resolves `true` when the app already holds the `PACKAGE_USAGE_STATS` permission.
+This permission cannot be requested with a runtime dialog.
+
+#### `openUsageAccessSettings(): Promise<boolean>`
+
+Opens the system **Settings → Usage access** screen so the user can grant the
+permission. Resolves `true` if the screen was opened.
+
+#### `getDeviceMemoryInfo(): Promise<{ ... }>`
+
+Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed.
+
+| Field            | Type    | Description                                        |
+| ---------------- | ------- | ------------------------------------------------- |
+| `totalBytes`     | number  | Total physical RAM                                |
+| `availableBytes` | number  | RAM available to start new processes             |
+| `usedBytes`      | number  | `totalBytes - availableBytes`                    |
+| `lowMemory`      | boolean | Whether the system is under memory pressure      |
+| `thresholdBytes` | number  | Low-memory threshold used by the system          |
+
+#### `getInstalledApps(options?): Promise<{ usageAccessGranted, totalCount, apps }>`
+
+## Options
+
+| Option              | Type    | Default       | Description                                                        |
+| ------------------- | ------- | ------------- | ---------------------------------------------------------------- |
+| `includeSystemApps` | boolean | `false`       | Include system apps that also have a launcher                     |
+| `includeIcons`      | boolean | `false`       | Attach each icon as a base64 data URI (noticeably heavier)        |
+| `sortBy`            | string  | `"totalSize"` | `"totalSize"` \| `"usageTime"` \| `"lastUsed"` \| `"name"`        |
+| `usagePeriod`       | string  | `"week"`      | Usage window: `"day"` \| `"week"` \| `"month"` \| `"year"`        |
+| `limit`             | number  | `0`           | Max apps returned after sorting (`0` = all)                       |
+
+### Result
+
+`usageAccessGranted` (boolean), `totalCount` (number, before `limit`) and `apps[]`:
+
+| Field              | Type    | Description                                                             |
+| ------------------ | ------- | -------------------------------------------------------------------- |
+| `packageName`      | string  | Application id                                                         |
+| `appName`          | string  | User-visible label                                                    |
+| `versionName`      | string  | May be empty when the app declares none                              |
+| `versionCode`      | number  | `longVersionCode` on API 28+                                          |
+| `icon`             | string? | base64 data URI, only when `includeIcons` is `true`                  |
+| `isSystemApp`      | boolean | `FLAG_SYSTEM` / `FLAG_UPDATED_SYSTEM_APP`                            |
+| `enabled`          | boolean | Whether the app is currently enabled                                 |
+| `firstInstallTime` | number  | Epoch ms                                                             |
+| `lastUpdateTime`   | number  | Epoch ms                                                             |
+| `targetSdkVersion` | number  | App `targetSdkVersion`                                               |
+| `minSdkVersion`    | number  | App `minSdkVersion` (`0` on API < 24)                                |
+| `category`         | string  | `"game"`, `"audio"`, `"productivity"`, … or `"undefined"`            |
+| `permissionsCount` | number  | Number of permissions the app requests                              |
+| `usageTimeMs`      | number  | Foreground time in the period (`0` if not granted / unused)          |
+| `lastUsedTime`     | number  | Epoch ms of last use (`0` if never / not granted)                    |
+| `launchCount`      | number  | Times moved to foreground in the period                             |
+| `appSizeBytes`     | number  | APK + OBB + compiled code size; install directory without compiled code on Xiaomi, matching MIUI/HyperOS Settings (`-1` when unavailable) |
+| `dataSizeBytes`    | number  | App data size, cache included (`-1` when unavailable)                |
+| `cacheSizeBytes`   | number  | Cache size, already part of `dataSizeBytes` (`-1` when unavailable)  |
+| `totalSizeBytes`   | number  | `appSizeBytes + dataSizeBytes` (`-1` when both unavailable)          |
+
+## Usage
+
+```js
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, View } from 'react-native';
+import { RTNUtils } from '@carlossts/rtn-utils';
+
+const App = () => {
+  const [apps, setApps] = useState([]);
+
+  const loadApps = useCallback(async () => {
+    try {
+      const granted = await RTNUtils?.hasUsageAccessPermission();
+      if (!granted) {
+        Alert.alert(
+          'Permission needed',
+          'Enable "Usage access" to see per-app usage time and size.',
+          [{ text: 'Open settings', onPress: () => RTNUtils?.openUsageAccessSettings() }],
+        );
+      }
+
+      const result = await RTNUtils?.getInstalledApps({
+        includeIcons: true,
+        sortBy: 'totalSize',
+        usagePeriod: 'week',
+        limit: 30,
+      });
+      setApps(result?.apps ?? []);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('getInstalledApps Failed', message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadApps();
+  }, [loadApps]);
+
+  return <View />;
+};
+
+export default App;
+```
+
+## ErrorCode
+
+| Code                   | Description                                       |
+| ---------------------- | ------------------------------------------------- |
+| E_GET_INSTALLED_APPS   | Failed to list installed apps                     |
+| E_GET_MEMORY_INFO      | Failed to read device memory info                 |
+| E_FAILED_TO_OPEN_SETTINGS | Failed to open usage access settings           |
 
 ## License
 
