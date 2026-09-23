@@ -1,5 +1,8 @@
 package com.rtnutils;
+import com.rtnutils.utils.AppInsightsUtils
+import com.rtnutils.utils.DeviceUtils
 import com.rtnutils.utils.IconUtils
+import com.rtnutils.utils.PermissionUtils
 
 import com.rtnutils.NativeGetRtnUtilsSpec
 import android.app.Activity
@@ -13,6 +16,7 @@ import android.util.Log
 import com.facebook.react.bridge.*
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.turbomodule.core.interfaces.TurboModule
+import java.util.concurrent.Executors
 
 class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec(reactContext) {
 
@@ -37,10 +41,14 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         private const val E_FAILED_TO_OPEN_SETTINGS = "E_FAILED_TO_OPEN_SETTINGS"
         private const val E_PACKAGE_NOT_FOUND = "E_PACKAGE_NOT_FOUND"
         private const val E_VALIDATION_FAILS = "E_VALIDATION_FAILS"
+        private const val E_GET_INSTALLED_APPS = "E_GET_INSTALLED_APPS"
+        private const val E_GET_MEMORY_INFO = "E_GET_MEMORY_INFO"
     }
 
     private val keyguardManager: KeyguardManager =
         reactContext.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+
+    private val backgroundExecutor = Executors.newSingleThreadExecutor()
 
     private var authPromise: Promise? = null
 
@@ -215,8 +223,80 @@ class UtilsModule(reactContext: ReactApplicationContext) : NativeGetRtnUtilsSpec
         }
     }
 
+    override fun hasUsageAccessPermission(promise: Promise) {
+        try {
+            promise.resolve(PermissionUtils.hasUsageAccessPermission(reactApplicationContext))
+        } catch (e: Exception) {
+            promise.reject(E_GET_INSTALLED_APPS, e.message ?: "Failed to read usage access state.", e)
+        }
+    }
+
+    override fun openUsageAccessSettings(promise: Promise) {
+        val opened = PermissionUtils.openUsageAccessSettings(reactApplicationContext)
+        if (opened) {
+            promise.resolve(true)
+        } else {
+            promise.reject(E_FAILED_TO_OPEN_SETTINGS, "Failed to open usage access settings.")
+        }
+    }
+
+    override fun openAppSettings(packageName: String, promise: Promise) {
+        if (packageName.isEmpty()) {
+            promise.reject(E_VALIDATION_FAILS, "PackageName is required.")
+            return
+        }
+
+        try {
+            reactApplicationContext.packageManager.getPackageInfo(packageName, 0)
+        } catch (e: PackageManager.NameNotFoundException) {
+            promise.reject(E_PACKAGE_NOT_FOUND, "App not found for package: $packageName")
+            return
+        }
+
+        val opened = PermissionUtils.openAppDetailsSettings(reactApplicationContext, packageName)
+        if (opened) {
+            promise.resolve(true)
+        } else {
+            promise.reject(E_FAILED_TO_OPEN_SETTINGS, "Failed to open app settings for package: $packageName")
+        }
+    }
+
+    override fun getDeviceMemoryInfo(promise: Promise) {
+        try {
+            promise.resolve(DeviceUtils.getMemoryInfo(reactApplicationContext))
+        } catch (e: Exception) {
+            promise.reject(E_GET_MEMORY_INFO, e.message ?: "Failed to read device memory info.", e)
+        }
+    }
+
+    override fun getInstalledApps(options: ReadableMap?, promise: Promise) {
+        val parsed = AppInsightsUtils.Options(
+            includeSystemApps = options?.getBooleanOrDefault("includeSystemApps", false) ?: false,
+            includeIcons = options?.getBooleanOrDefault("includeIcons", false) ?: false,
+            sortBy = options?.getString("sortBy") ?: "totalSize",
+            usagePeriod = options?.getString("usagePeriod") ?: "week",
+            limit = options?.getIntOrDefault("limit", 0) ?: 0,
+        )
+
+        backgroundExecutor.execute {
+            try {
+                val result = AppInsightsUtils.getInstalledApps(reactApplicationContext, parsed)
+                promise.resolve(result)
+            } catch (e: Exception) {
+                promise.reject(E_GET_INSTALLED_APPS, e.message ?: "Failed to list installed apps.", e)
+            }
+        }
+    }
 
     private fun ReadableMap.getString(key: String): String? {
         return if (hasKey(key) && getType(key) == ReadableType.String) getString(key) else null
+    }
+
+    private fun ReadableMap.getBooleanOrDefault(key: String, fallback: Boolean): Boolean {
+        return if (hasKey(key) && getType(key) == ReadableType.Boolean) getBoolean(key) else fallback
+    }
+
+    private fun ReadableMap.getIntOrDefault(key: String, fallback: Int): Int {
+        return if (hasKey(key) && getType(key) == ReadableType.Number) getInt(key) else fallback
     }
 }

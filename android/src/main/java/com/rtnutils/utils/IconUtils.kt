@@ -1,5 +1,6 @@
 package com.rtnutils.utils
 
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -27,5 +28,13 @@ object IconUtils {
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
         val byteArray = outputStream.toByteArray()
         return "data:image/png;base64,${Base64.encodeToString(byteArray, Base64.DEFAULT)}"
+    }
+
+    fun getAppIconBase64OrNull(pm: PackageManager, appInfo: ApplicationInfo): String? {
+        return try {
+            getAppIconBase64(pm.getApplicationIcon(appInfo))
+        } catch (e: Exception) {
+            null
+        }
     }
 }
