@@ -1,12 +1,53 @@
 # `rtn-utils`
 
-`rtn-utils` It is a toolkit and utilities library for React Native, built using Turbo Modules. It provides authentication methods and access to global settings, such as location and Bluetooth configuration, for Android devices.
+`rtn-utils` is a toolkit and utilities library for React Native, built using Turbo Modules. It provides authentication methods, access to global settings (such as location and Bluetooth), location app integration and installed-app insights for Android devices.
+## Local development
+
+How to test local changes to the library inside a React Native app (New Architecture enabled) before publishing.
+
+### Packed tarball
+
+Installs exactly what would be published to npm, so it also validates the `files` field in `package.json`.
+
+```bash
+# in the library folder
+cd path/to/rtn-utils
+npm pack
+# generates carlossts-rtn-utils-<version>.tgz
+
+# in the React Native app folder
+cd path/to/your-app
+npm install ../rtn-utils/carlossts-rtn-utils-<version>.tgz
+# or
+yarn add ../rtn-utils/carlossts-rtn-utils-<version>.tgz
+
+npx react-native run-android
+```
+
+Repeat `npm pack` + install after every change to the library.
+
+### When to rebuild
+
+| Change                                  | What to do                                                  |
+| --------------------------------------- | ----------------------------------------------------------- |
+| `js/index.ts` only                      | Reload the app (Metro picks it up)                          |
+| `js/NativeGetRtnUtils.ts` (Turbo Module spec) | Rebuild the Android app, so codegen regenerates `NativeGetRtnUtilsSpec` |
+| Kotlin files / `AndroidManifest.xml`    | Rebuild the Android app (`npx react-native run-android`)    |
+
+If Gradle keeps stale generated code, clean it:
+
+```bash
+cd android && ./gradlew clean && cd ..
+npx react-native run-android
+```
 
 ## Features
 
 - Support for fingerprint, PIN, and pattern authentication on Android.
+- Open global device settings screens.
+- List location apps and open them with coordinates.
+- List installed apps with metadata, usage time and storage size, plus a device-wide RAM snapshot.
 - Fully compatible with React Native's Turbo Module system.
-- Simple API to integrate local authentication into your React Native application.
 
 ## Installation
 
@@ -107,6 +148,7 @@ export default App;
 | E_AUTH_CANCELLED      | User canceled the authentication                  |
 | E_ONE_REQ_AT_A_TIME   | Authentication already in progress                |
 | E_FAILED_TO_SHOW_AUTH | Failed to create authentication intent            |
+| E_ACTIVITY_DOES_NOT_EXIST | No current activity to show the authentication |
 
 ##
 
@@ -177,6 +219,14 @@ const App = () => {
 export default App;
 ```
 
+## ErrorCode
+
+| Code                      | Description                                   |
+| ------------------------- | --------------------------------------------- |
+| E_ACTIVITY_DOES_NOT_EXIST | No current activity to open the settings from |
+| E_ACTION_IS_EMPTY         | Action is empty                               |
+| E_FAILED_TO_OPEN_SETTINGS | Failed to open the settings screen            |
+
 ##
 
 ### `getLocationApps(options: { includesBase64: boolean }): Promise<{ name: string; package: string; icon?: string; }[]>;`
@@ -204,10 +254,10 @@ const App = () => {
       const apps = await RTNUtils?.getLocationApps({
         includesBase64: true
       });
-      Alert.alert('total applications found:' apps?.length);
+      Alert.alert('Total applications found', String(apps?.length ?? 0));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      Alert.alert('openGlobalSettings Failed', errorMessage);
+      Alert.alert('getLocationApps Failed', errorMessage);
     }
   }, []);
 
@@ -301,7 +351,7 @@ footprint.
 > `hidepid`-restricted since Android 7. So this API reports **storage size**
 > (`totalSizeBytes`) and **foreground time** (`usageTimeMs`) as the per-app
 > "consumption" metrics, plus a device-wide RAM snapshot via
-> [`getDeviceMemoryInfo`](#getdevicememoryinfo-promise-).
+> [`getDeviceMemoryInfo`](#getdevicememoryinfo).
 
 > **Play Store compliance:** the library only enumerates apps that expose a
 > launcher activity, declaring a `<queries>` element for `MAIN`/`LAUNCHER`
@@ -319,6 +369,23 @@ This permission cannot be requested with a runtime dialog.
 
 Opens the system **Settings → Usage access** screen so the user can grant the
 permission. Resolves `true` if the screen was opened.
+
+#### `openAppSettings(packageName: string): Promise<boolean>`
+
+Opens the system **App info** screen of the given package (storage, permissions,
+force stop, uninstall). Resolves `true` if the screen was opened.
+
+```js
+await RTNUtils?.openAppSettings('com.google.android.youtube');
+```
+
+| Code                      | Description                                   |
+| ------------------------- | --------------------------------------------- |
+| E_VALIDATION_FAILS        | Package name is empty                         |
+| E_PACKAGE_NOT_FOUND       | App not installed (or not visible to the app) |
+| E_FAILED_TO_OPEN_SETTINGS | Failed to open the App info screen            |
+
+<a id="getdevicememoryinfo"></a>
 
 #### `getDeviceMemoryInfo(): Promise<{ ... }>`
 
@@ -366,8 +433,8 @@ Device-wide RAM snapshot from `ActivityManager.MemoryInfo`. No permission needed
 | `usageTimeMs`      | number  | Foreground time in the period (`0` if not granted / unused)          |
 | `lastUsedTime`     | number  | Epoch ms of last use (`0` if never / not granted)                    |
 | `launchCount`      | number  | Times moved to foreground in the period                             |
-| `appSizeBytes`     | number  | APK + OBB size (`-1` when unavailable)                               |
-| `dataSizeBytes`    | number  | App data size (`-1` when unavailable)                                |
+| `appSizeBytes`     | number  | APKs (including splits), compiled code and native libs (`-1` when unavailable) |
+| `dataSizeBytes`    | number  | App data size, excluding cache (`-1` when unavailable)               |
 | `cacheSizeBytes`   | number  | Cache size (`-1` when unavailable)                                   |
 | `totalSizeBytes`   | number  | Sum of the three (`-1` when all unavailable)                         |
 
@@ -419,11 +486,11 @@ export default App;
 
 | Code                   | Description                                       |
 | ---------------------- | ------------------------------------------------- |
-| E_GET_INSTALLED_APPS   | Failed to list installed apps                     |
+| E_GET_INSTALLED_APPS   | Failed to list installed apps or read the usage access state (`hasUsageAccessPermission`) |
 | E_GET_MEMORY_INFO      | Failed to read device memory info                 |
 | E_FAILED_TO_OPEN_SETTINGS | Failed to open usage access settings           |
 
 ## License
 
-[MIT](LICENSE.md)
+[MIT](LICENSE)
 

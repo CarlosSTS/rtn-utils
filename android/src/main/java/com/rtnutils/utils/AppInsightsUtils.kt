@@ -1,32 +1,13 @@
 package com.rtnutils.utils
 
-import android.app.ActivityManager
-import android.app.AppOpsManager
 import android.app.usage.StorageStatsManager
-import android.app.usage.UsageEvents
-import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Process
-import android.provider.Settings
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
 
-/**
- * Collects installed-app metadata plus (when "Usage access" is granted) per-app
- * foreground time and storage footprint.
- *
- * Android exposes no Play-compliant API for the real-time RAM usage of other
- * apps on non-rooted devices, so "consumption" here means storage size and
- * foreground time — the closest per-app metrics that are actually available.
- */
 object AppInsightsUtils {
-
-    private const val DAY_MS = 24L * 60L * 60L * 1000L
 
     data class Options(
         val includeSystemApps: Boolean = false,
@@ -36,99 +17,29 @@ object AppInsightsUtils {
         val limit: Int = 0,
     )
 
-    fun hasUsageAccessPermission(context: Context): Boolean {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
-            ?: return false
-        @Suppress("DEPRECATION")
-        val mode = try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                appOps.unsafeCheckOpNoThrow(
-                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    Process.myUid(),
-                    context.packageName,
-                )
-            } else {
-                appOps.checkOpNoThrow(
-                    AppOpsManager.OPSTR_GET_USAGE_STATS,
-                    Process.myUid(),
-                    context.packageName,
-                )
-            }
-        } catch (e: Exception) {
-            return false
-        }
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
-
-    fun openUsageAccessSettings(context: Context): Boolean {
-        return try {
-            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    fun getDeviceMemoryInfo(context: Context): WritableMap {
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val info = ActivityManager.MemoryInfo()
-        am.getMemoryInfo(info)
-        val used = (info.totalMem - info.availMem).coerceAtLeast(0L)
-        return Arguments.createMap().apply {
-            putDouble("totalBytes", info.totalMem.toDouble())
-            putDouble("availableBytes", info.availMem.toDouble())
-            putDouble("usedBytes", used.toDouble())
-            putBoolean("lowMemory", info.lowMemory)
-            putDouble("thresholdBytes", info.threshold.toDouble())
-        }
-    }
-
     fun getInstalledApps(context: Context, options: Options): WritableMap {
         val pm = context.packageManager
-        val granted = hasUsageAccessPermission(context)
+        val granted = PermissionUtils.hasUsageAccessPermission(context)
 
-        val periodMs = when (options.usagePeriod.lowercase()) {
-            "day" -> DAY_MS
-            "month" -> 30L * DAY_MS
-            "year" -> 365L * DAY_MS
-            else -> 7L * DAY_MS
-        }
         val end = System.currentTimeMillis()
-        val start = end - periodMs
+        val start = end - UsageStatsUtils.periodToMillis(options.usagePeriod)
 
-        // packageName -> [totalForegroundMs, lastTimeUsed]
-        val usage = HashMap<String, LongArray>()
-        val launches = HashMap<String, Int>()
-        if (granted) {
-            collectUsage(context, start, end, usage, launches)
-        }
-
-        val storageStatsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.getSystemService(Context.STORAGE_STATS_SERVICE) as? StorageStatsManager
+        val usage = if (granted) {
+            UsageStatsUtils.queryAppUsage(context, start, end)
         } else {
-            null
+            emptyMap()
         }
 
-        val launcherIntent = Intent(Intent.ACTION_MAIN, null).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        val resolved = pm.queryIntentActivities(launcherIntent, 0)
-        val packageNames = LinkedHashSet<String>()
-        for (ri in resolved) {
-            ri.activityInfo?.packageName?.let { packageNames.add(it) }
-        }
+        val storageStatsManager = if (granted) StorageUtils.getStorageStatsManager(context) else null
 
+        val packageNames = PackageUtils.getLauncherPackages(pm)
         val rows = ArrayList<AppRow>(packageNames.size)
         for (pkg in packageNames) {
             val row = buildRow(
-                context = context,
+                pm = pm,
                 packageName = pkg,
                 options = options,
-                granted = granted,
                 usage = usage[pkg],
-                launchCount = launches[pkg] ?: 0,
                 storageStatsManager = storageStatsManager,
             ) ?: continue
             if (row.isSystemApp && !options.includeSystemApps) continue
@@ -155,106 +66,23 @@ object AppInsightsUtils {
         }
     }
 
-    private fun collectUsage(
-        context: Context,
-        start: Long,
-        end: Long,
-        usage: HashMap<String, LongArray>,
-        launches: HashMap<String, Int>,
-    ) {
-        val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return
-        try {
-            val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_BEST, start, end)
-            if (stats != null) {
-                for (s in stats) {
-                    val entry = usage.getOrPut(s.packageName) { longArrayOf(0L, 0L) }
-                    entry[0] += s.totalTimeInForeground
-                    if (s.lastTimeUsed > entry[1]) entry[1] = s.lastTimeUsed
-                }
-            }
-        } catch (e: Exception) {
-            // ignore — usage stays empty
-        }
-        try {
-            val events = usm.queryEvents(start, end)
-            val event = UsageEvents.Event()
-            while (events.hasNextEvent()) {
-                events.getNextEvent(event)
-                @Suppress("DEPRECATION")
-                if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
-                    launches[event.packageName] = (launches[event.packageName] ?: 0) + 1
-                }
-            }
-        } catch (e: Exception) {
-            // ignore — launch counts stay at 0
-        }
-    }
-
     private fun buildRow(
-        context: Context,
+        pm: PackageManager,
         packageName: String,
         options: Options,
-        granted: Boolean,
-        usage: LongArray?,
-        launchCount: Int,
+        usage: UsageStatsUtils.AppUsage?,
         storageStatsManager: StorageStatsManager?,
     ): AppRow? {
-        val pm = context.packageManager
         return try {
             @Suppress("DEPRECATION")
             val appInfo = pm.getApplicationInfo(packageName, 0)
             @Suppress("DEPRECATION")
             val pkgInfo = pm.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
 
-            val isSystemApp = (appInfo.flags and
-                (ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
-
-            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                pkgInfo.longVersionCode
-            } else {
-                @Suppress("DEPRECATION")
-                pkgInfo.versionCode.toLong()
-            }
-
-            val minSdk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                appInfo.minSdkVersion
-            } else {
-                0
-            }
-
-            val category = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                categoryToString(appInfo.category)
-            } else {
-                "undefined"
-            }
-
-            var appSize = -1L
-            var dataSize = -1L
-            var cacheSize = -1L
-            if (granted && storageStatsManager != null &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-            ) {
-                try {
-                    val stats = storageStatsManager.queryStatsForPackage(
-                        appInfo.storageUuid,
-                        packageName,
-                        Process.myUserHandle(),
-                    )
-                    appSize = stats.appBytes
-                    dataSize = stats.dataBytes
-                    cacheSize = stats.cacheBytes
-                } catch (e: Exception) {
-                    // leave sizes at -1
-                }
-            }
+            val storage = StorageUtils.queryAppStorage(storageStatsManager, appInfo)
 
             val icon = if (options.includeIcons) {
-                try {
-                    IconUtils.getAppIconBase64(pm.getApplicationIcon(appInfo))
-                } catch (e: Exception) {
-                    null
-                }
+                IconUtils.getAppIconBase64OrNull(pm, appInfo)
             } else {
                 null
             }
@@ -263,22 +91,22 @@ object AppInsightsUtils {
                 packageName = packageName,
                 appName = pm.getApplicationLabel(appInfo).toString(),
                 versionName = pkgInfo.versionName ?: "",
-                versionCode = versionCode,
+                versionCode = PackageUtils.getVersionCode(pkgInfo),
                 icon = icon,
-                isSystemApp = isSystemApp,
+                isSystemApp = PackageUtils.isSystemApp(appInfo),
                 enabled = appInfo.enabled,
                 firstInstallTime = pkgInfo.firstInstallTime,
                 lastUpdateTime = pkgInfo.lastUpdateTime,
                 targetSdkVersion = appInfo.targetSdkVersion,
-                minSdkVersion = minSdk,
-                category = category,
+                minSdkVersion = PackageUtils.getMinSdkVersion(appInfo),
+                category = PackageUtils.getCategory(appInfo),
                 permissionsCount = pkgInfo.requestedPermissions?.size ?: 0,
-                usageTimeMs = usage?.get(0) ?: 0L,
-                lastUsedTime = usage?.get(1) ?: 0L,
-                launchCount = launchCount,
-                appSizeBytes = appSize,
-                dataSizeBytes = dataSize,
-                cacheSizeBytes = cacheSize,
+                usageTimeMs = usage?.foregroundTimeMs ?: 0L,
+                lastUsedTime = usage?.lastTimeUsed ?: 0L,
+                launchCount = usage?.launchCount ?: 0,
+                appSizeBytes = storage?.appBytes ?: -1L,
+                dataSizeBytes = storage?.dataBytes ?: -1L,
+                cacheSizeBytes = storage?.cacheBytes ?: -1L,
             )
         } catch (e: Exception) {
             null
@@ -293,26 +121,6 @@ object AppInsightsUtils {
             else -> compareByDescending<AppRow> { maxOf(it.totalSizeBytes(), 0L) }
         }
         rows.sortWith(comparator.thenBy(String.CASE_INSENSITIVE_ORDER) { it.appName })
-    }
-
-    private fun categoryToString(category: Int): String = when (category) {
-        ApplicationInfo.CATEGORY_GAME -> "game"
-        ApplicationInfo.CATEGORY_AUDIO -> "audio"
-        ApplicationInfo.CATEGORY_VIDEO -> "video"
-        ApplicationInfo.CATEGORY_IMAGE -> "image"
-        ApplicationInfo.CATEGORY_SOCIAL -> "social"
-        ApplicationInfo.CATEGORY_NEWS -> "news"
-        ApplicationInfo.CATEGORY_MAPS -> "maps"
-        ApplicationInfo.CATEGORY_PRODUCTIVITY -> "productivity"
-        else -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                category == ApplicationInfo.CATEGORY_ACCESSIBILITY
-            ) {
-                "accessibility"
-            } else {
-                "undefined"
-            }
-        }
     }
 
     private data class AppRow(

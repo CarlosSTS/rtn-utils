@@ -82,6 +82,21 @@ export interface Spec extends TurboModule {
   openUsageAccessSettings(): Promise<boolean>;
 
   /**
+   * Opens the system "App info" screen
+   * (`Settings.ACTION_APPLICATION_DETAILS_SETTINGS`) for the given package.
+   *
+   * @param packageName Package name of the app, e.g. `"com.whatsapp"`.
+   *
+   * @returns A Promise resolving to `true` if the screen was opened. Rejects with
+   * `E_VALIDATION_FAILS` for an empty package name, `E_PACKAGE_NOT_FOUND` when the
+   * app is not installed or not visible, and `E_FAILED_TO_OPEN_SETTINGS` otherwise.
+   *
+   * @example
+   * await RTNUtils.openAppSettings('com.google.android.youtube');
+   */
+  openAppSettings(packageName: string): Promise<boolean>;
+
+  /**
    * Returns a device-wide RAM snapshot from `ActivityManager.MemoryInfo`.
    *
    * Android does not expose per-app RAM usage of third-party apps to regular
@@ -151,8 +166,9 @@ export interface Spec extends TurboModule {
    *   - `lastUsedTime` (number): epoch milliseconds of last use, `0` if never / not
    *     granted.
    *   - `launchCount` (number): number of times moved to foreground in the period.
-   *   - `appSizeBytes` (number): APK + OBB size. `-1` when unavailable.
-   *   - `dataSizeBytes` (number): app data size. `-1` when unavailable.
+   *   - `appSizeBytes` (number): APKs (including splits), compiled code and native
+   *     libraries. `-1` when unavailable.
+   *   - `dataSizeBytes` (number): app data size, excluding cache. `-1` when unavailable.
    *   - `cacheSizeBytes` (number): cache size. `-1` when unavailable.
    *   - `totalSizeBytes` (number): `appSizeBytes + dataSizeBytes + cacheSizeBytes`.
    *     `-1` when unavailable.
